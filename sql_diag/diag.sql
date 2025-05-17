@@ -48,6 +48,10 @@ WHERE TABLE_SCHEMA NOT LIKE '%schema'
 AND TABLE_SCHEMA NOT LIKE 'mysql'
 AND ENGINE NOT LIKE 'InnoDB';
 
+SELECT TABLE_SCHEMA, TABLE_NAME, ENGINE
+FROM information_schema.TABLES
+WHERE TABLE_NAME like 'wp_8_postmeta';
+
 SELECT USER, DB, TIME, STATE, STAGE, REGEXP_REPLACE(INFO, '[[:space:]]+', ' ') AS 'Query'
 FROM information_schema.PROCESSLIST
 WHERE INFO IS NOT NULL
@@ -104,7 +108,6 @@ OR NAME = 'statement/sql/execute_sql';
 
 --Tools
 PURGE BINARY LOGS BEFORE NOW();
-
 
 
 SET GLOBAL general_log_file = '/var/log/mysql/mysql_general.log';

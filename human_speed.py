@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-
 import time
 import keyboard
 
-while True:
-    if keyboard.read_key() == "p":
-        print("You pressed p")
-        break
+start = time.time()
+for i in range(10):
+    keyboard.read_key()
+print(f'\n{time.time() - start}')
