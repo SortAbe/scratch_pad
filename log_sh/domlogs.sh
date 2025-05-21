@@ -39,3 +39,5 @@ for i in $(grep -oP "^.+webmaild. .{7,15} NEW" session_log | awk '{print $6}' | 
     grep -oE "^.+webmaild. $i NEW [^:]+" session_log  | awk '{print $8}' | sort | uniq -c | sort -rn
     whois $i | grep -iP "^org-?name:"
 done
+
+awk -e 'BEGIN{mask=27;a=(32-mask);b=(2**24);c=(2**16);d=(2**8);}$1~/(2(5[0-5]|[0-4][0-9])|1[0-9]{2}|[1-9][0-9]?)(\.(2(5[0-5]|[0-4][0-9])|1[0-9]{2}|[0-9]{1,2})){3}/{split($1,e,".");f=lshift(e[1],24)+lshift(e[2],16)+lshift(e[3],8)+e[4];f=lshift(rshift(f,a),a);g[1]=rshift(f,24);g[2]=rshift(f%b,16);g[3]=rshift(f%c,8);g[4]=f%d;print g[1]"."g[2]"."g[3]"."g[4]"/"mask;}' example.com-ssl_log
