@@ -1,5 +1,4 @@
 --Active load
-
 SELECT *
 FROM  performance_schema.global_status
 WHERE VARIABLE_NAME LIKE 'Threads_running'

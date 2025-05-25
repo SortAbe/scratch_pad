@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 first_params="
 %{speed_download}<>\
 %{time_namelookup}<>\
@@ -58,7 +57,7 @@ for ((i = 0; i < 10; i++)); do
 
     #whois
     ip=$(echo "$output" | awk -F"<>" '{print $20}');
-    asn_info=$(curl -s "https://test.gitlo.net/whois.php" -d "$ip");
+    asn_info=$(curl -s "https://abediaz.me/whois.php" -d "$ip");
     asn_info=$(echo "$asn_info" | sed '/^ip:.*/d;s/^\w*: /<>/g' | tr --delete '\n');
 
     output="$output$asn_info";
