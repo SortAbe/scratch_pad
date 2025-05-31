@@ -5,15 +5,14 @@ import os
 import time
 
 
-class Images:
-
+class RenderEngine:
     ESC = chr(27)
-    ob = chr(91) # '['OPEN BRACKET char creates IDE issues if not closed ]
-    start_of_file = ESC + ob + '0m'
-    end_of_line =  ESC + ob + '0m\n'
+    OB = chr(91) # '['OPEN BRACKET char creates IDE issues if not closed ]
+    start_of_file = ESC + OB + '0m'
+    end_of_line =  ESC + OB + '0m\n'
     depth = 8 # z
     # [x,y,z[0-8]] = [fr, fg, fb, br, bg, bb, symbol, optional]
-    np_imgs: list[np.ndarray] = []
+    imgs: list[np.ndarray] = []
     sin = {} # map symbols to byte
     sout: list [ str ] = [] # map back to utf8
 
@@ -35,40 +34,26 @@ class Images:
         for i in sorted_values:
             self.sout.append(invert[i])
 
+    def save(self, path: str):
+        np.savez(path, **{f'{i}': arr for i, arr in enumerate(re_eng.imgs)})
+
+    def load(self, path: str):
+        for img in np.load(path).values(): self.imgs.append(img)
+
     # PROGENITOR INGEST
     def ingest(self, path: str = ''):
-        with open(path, 'r') as file:
-            lines = file.readlines()
-            height = len(lines)
-            lines[0] = lines[0][4:] # start of file
-            lines[0] = lines[0][1:] # start of line
-            lines[0] = lines[0][:-5] # end of line
-            splices = lines[0].split(self.ESC)[1::2]
-            width = len(splices)
-            shape = (width, height, self.depth)
-            np_img = np.empty(shape, dtype=np.uint8)
-            x = 0
-            for splice in splices:
-                splice = splice.split(';')
-                cell = [
-                    0,
-                    int((splice[2])), # fg red
-                    int((splice[3])), # fg green
-                    int((splice[4])), # fg blue
-                    int((splice[7])), # bg red
-                    int((splice[8])), # bg green
-                    int((splice[9]).split('m')[0]), # bg blue
-                    self.sin[(splice[9]).split('m')[1]], # symbol
-                ]
-                np_img[x,0,0:8] = cell
-                if 256 in cell:
-                    print(cell)
-                x+=1
-            y = 1
-            for line in lines[1:]:
-                line = line[1:]  # start of line
-                line = line[:-5] # end of line
-                splices = line.split(self.ESC)[1::2]
+        for file_path in os.listdir(path):
+            print(file_path)
+            with open(path + '/' + file_path, 'r') as file:
+                lines = file.readlines()
+                height = len(lines)
+                lines[0] = lines[0][4:] # start of file
+                lines[0] = lines[0][1:] # start of line
+                lines[0] = lines[0][:-5] # end of line
+                splices = lines[0].split(self.ESC)[1::2]
+                width = len(splices)
+                shape = (width, height, self.depth)
+                np_img = np.empty(shape, dtype=np.uint8)
                 x = 0
                 for splice in splices:
                     splice = splice.split(';')
@@ -82,10 +67,32 @@ class Images:
                         int((splice[9]).split('m')[0]), # bg blue
                         self.sin[(splice[9]).split('m')[1]], # symbol
                     ]
-                    np_img[x,y,0:8] = cell
+                    np_img[x,0,0:8] = cell
+                    if 256 in cell:
+                        print(cell)
                     x+=1
-                y+=1
-        self.np_imgs.append(self.optimize(np_img))
+                y = 1
+                for line in lines[1:]:
+                    line = line[1:]  # start of line
+                    line = line[:-5] # end of line
+                    splices = line.split(self.ESC)[1::2]
+                    x = 0
+                    for splice in splices:
+                        splice = splice.split(';')
+                        cell = [
+                            0,
+                            int((splice[2])), # fg red
+                            int((splice[3])), # fg green
+                            int((splice[4])), # fg blue
+                            int((splice[7])), # bg red
+                            int((splice[8])), # bg green
+                            int((splice[9]).split('m')[0]), # bg blue
+                            self.sin[(splice[9]).split('m')[1]], # symbol
+                        ]
+                        np_img[x,y,0:8] = cell
+                        x+=1
+                    y+=1
+            self.imgs.append(self.optimize(np_img))
 
     # OPTIMIZE
     def optimize(self, arr: np.ndarray):
@@ -114,28 +121,28 @@ class Images:
         an_arr = tnp_img.tolist()
         for row in an_arr:
             px = row[0]
-            line = ESC + self.ob +\
+            line = ESC + self.OB +\
             f'38;2;{px[1]};{px[2]};{px[3]}' +\
             f';48;2;{px[4]};{px[5]};{px[6]}' +\
             'm' + self.sout[px[7]]
             for px in row[1:]:
                 symbol = self.sout[px[7]]
                 if px[0] == 3:
-                    line += ESC + self.ob +\
+                    line += ESC + self.OB +\
                     f'38;2;{px[1]};{px[2]};{px[3]}' +\
                     f';48;2;{px[4]};{px[5]};{px[6]}' +\
                     'm'
                 elif px[0] == 2:
-                    line += ESC + self.ob +\
+                    line += ESC + self.OB +\
                     f'48;2;{px[4]};{px[5]};{px[6]}' +\
                     'm'
                 elif px[0] == 1:
-                    line += ESC + self.ob +\
+                    line += ESC + self.OB +\
                     f'38;2;{px[1]};{px[2]};{px[3]}' +\
                     'm'
                 line += symbol
             print_out += line + self.end_of_line
-        # print(print_out, end='')
+        print(print_out, end='')
 
     def get_info(self, np_img: np.ndarray):
         if type(np_img) != np.ndarray:
@@ -149,51 +156,30 @@ class Images:
         print(f'Depth: {np_img.shape[2]}')
 
 start = time.time()
-img = Images()
+re_eng = RenderEngine()
 print(f'init duration: {(time.time() - start) * 1000:.2f}ms')
 
-start = time.time()
-all_files = os.listdir('dump')
-count = len(all_files)
-for file in all_files:
-    img.ingest('dump/' + file)
-print(f'Ingest duration: {(time.time() - start) * 1000:.2f}ms')
-print(f'Avg Ingest duration: {(time.time() - start) * 1000 / count:.2f}ms')
-
-start = time.time()
-for i in range(count):
-    img.render(img.np_imgs[i])
-print(f'Render duration: {(time.time() - start) * 1000:.2f}ms')
-print(f'Avg Render duration: {(time.time() - start) * 1000 / count:.2f}ms')
-
-start = time.time()
-for i in range(count):
-    img.optimize(img.np_imgs[i])
-print(f'Optimize duration: {(time.time() - start) * 1000:.2f}ms')
-print(f'Avg Optimize duration: {(time.time() - start) * 1000 / count:.2f}ms')
-
+# start = time.time()
+# re_eng.ingest('lg_db')
+# print(f'Ingest duration: {(time.time() - start) * 1000:.2f}ms')
 
 # start = time.time()
-#     img.render(img.np_imgs[random.randint(0, 299)])
-
-# start = time.time()
-# np.savez('arrays.npz', **{f'arr_{i}': arr for i, arr in enumerate(img.np_imgs)})
-# print(f'Save duration: {(time.time() - start) * 1000 / count:.2f}ms')
-
+# re_eng.save('lg_db.npz')
+# print(f'Save duration: {(time.time() - start) * 1000:.2f}ms')
 
 start = time.time()
-data = np.load('arrays.npz')
+re_eng.load('lg_db.npz')
 print(f'Load duration: {(time.time() - start) * 1000:.2f}ms')
+# time.sleep(20)
 
 
+start = time.time()
+for img in re_eng.imgs[100:200]:
+    re_eng.render(img)
+print(f'Full Render duration: {(time.time() - start) * 1000:.2f}ms')
 
-# print(f'Render duration: {(time.time() - start) * 1000:.2f}ms')
-# print('Number of files processed: ' + str(len(all_files)))
+start = time.time()
+for img in re_eng.imgs:
+    re_eng.optimize(img)
+print(f'Full Optimize duration: {(time.time() - start) * 1000:.2f}ms')
 
-# start = time.time()
-# arr = np.random.randint(0, 255, (130, 35*40_000, 8), dtype=np.uint8)
-# np.save("array.npy", arr)
-# my_loaded_array = np.load('array.npy')
-# print(f'load dur: {(time.time() - start) * 1000:.2f}ms')
-
-# time.sleep(10)
