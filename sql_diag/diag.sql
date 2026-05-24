@@ -17,7 +17,7 @@ FROM information_schema.ENGINES;
 
 SELECT TABLE_SCHEMA, TABLE_NAME, ENGINE
 FROM information_schema.TABLES
-WHERE TABLE_SCHEMA like 'DB_NAME';
+WHERE TABLE_SCHEMA like '%otels%';
 
 SELECT TABLE_SCHEMA, TABLE_NAME, ENGINE
 FROM information_schema.TABLES
@@ -88,9 +88,12 @@ UPDATE performance_schema.setup_consumers
 SET ENABLED = 'YES'
 WHERE NAME = 'events_statements_current';
 
-SELECT THREAD_ID, EVENT_NAME, LOCK_TIME, SQL_TEXT, CURRENT_SCHEMA, WARNINGS, ERRORS
-FROM performance_schema.events_statements_current
-WHERE SQL_TEXT IS NOT NULL;
+SELECT THREAD_ID, EVENT_NAME, LOCK_TIME, SUBSTRING(SQL_TEXT, 1, 50), CURRENT_SCHEMA, WARNINGS, ERRORS,
+(TIMER_END - TIMER_START) / POWER(1000, 3) as 'time_ms'
+FROM performance_schema.events_statements_history_long
+WHERE SQL_TEXT IS NOT NULL
+AND CURRENT_SCHEMA = 'hcistore_live'
+ORDER BY (TIMER_END - TIMER_START) DESC;
 
 SELECT *
 FROM performance_schema.prepared_statements_instances;
@@ -111,3 +114,10 @@ PURGE BINARY LOGS BEFORE NOW();
 
 SET GLOBAL general_log_file = '/var/log/mysql/mysql_general.log';
 SET GLOBAL log_output = 'FILE';
+
+SELECT TABLE_SCHEMA, TABLE_NAME, ENGINE, (DATA_LENGTH + INDEX_LENGTH)/1024/1204 as 'size'
+FROM information_schema.TABLES
+WHERE TABLE_SCHEMA NOT LIKE '%schema'
+AND TABLE_SCHEMA NOT LIKE 'mysql'
+AND ENGINE NOT LIKE 'InnoDB'
+ORDER BY size;
